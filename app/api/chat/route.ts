@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     const systemPrompt = buildSystemPrompt(financialData)
 
     const result = streamText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: "openai/gpt-4o-mini",
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
       temperature: 0.7,
@@ -91,11 +91,13 @@ export async function POST(request: Request) {
     })
 
     return result.toUIMessageStreamResponse()
-  } catch (error) {
-    console.error("Chat API error:", error)
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : String(error)
+    console.error("Chat API error:", errMessage)
     return new Response(
-      JSON.stringify({ error: "An internal error occurred. Please try again." }),
+      JSON.stringify({ error: `AI request failed: ${errMessage}` }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     )
   }
 }
+
