@@ -15,7 +15,7 @@ function AppContent() {
   const { data } = useFinance()
   const [activeTab, setActiveTab] = useState("dashboard")
 
-  // Show onboarding if not completed
+
   if (!data.onboardingCompleted) {
     return <OnboardingWizard />
   }
