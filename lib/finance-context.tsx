@@ -14,15 +14,15 @@ export interface Loan {
   name: string
   amount: number
   interestRate: number
-  duration: number // months
+  duration: number
   monthlyPayment: number
 }
 
 export interface FinancialData {
-  // Income
+  
   monthlyIncome: number
   
-  // Fixed Expenses (split into categories for simulator)
+ 
   rent: number
   utilities: number
   subscriptions: number
@@ -31,20 +31,18 @@ export interface FinancialData {
   mortgage: number
   otherExpenses: ExpenseCategory[]
   
-  // Debts
+  
   loans: Loan[]
   
-  // Savings - Split into two types
-  cashSavings: number         // Cash/card balance - doesn't grow
-  depositSavings: number      // Money on deposit - grows with interest
-  depositInterestRate: number // Annual interest rate %
-  monthlyDepositContribution: number // Monthly contribution to deposit
   
-  // Legacy field for backwards compatibility
-  currentSavings: number      // Total of cash + deposit
-  plannedMonthlySavings: number // Legacy - now use monthlyDepositContribution
+  cashSavings: number       
+  depositSavings: number     
+  depositInterestRate: number 
+  monthlyDepositContribution: number 
+
+  currentSavings: number     
+  plannedMonthlySavings: number 
   
-  // Calculated fields
   totalExpenses: number
   totalDebt: number
   totalMonthlyDebtPayment: number
@@ -52,7 +50,6 @@ export interface FinancialData {
   debtToIncomeRatio: number
   riskScore: number
   
-  // Onboarding
   onboardingCompleted: boolean
 }
 
@@ -119,14 +116,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<FinancialData>(defaultData)
   const [achievements, setAchievements] = useState<Achievement[]>(defaultAchievements)
 
-  // Load from localStorage on mount
+ 
   useEffect(() => {
     const stored = localStorage.getItem('finx-data')
     const storedAchievements = localStorage.getItem('finx-achievements')
     if (stored) {
       try {
         const parsedData = JSON.parse(stored)
-        // Migrate old data structure if needed
+       
         if (parsedData.currentSavings !== undefined && parsedData.cashSavings === undefined) {
           parsedData.cashSavings = parsedData.currentSavings
           parsedData.depositSavings = 0
@@ -149,7 +146,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Save to localStorage on change
+
   useEffect(() => {
     if (data !== defaultData) {
       localStorage.setItem('finx-data', JSON.stringify(data))
@@ -160,15 +157,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('finx-achievements', JSON.stringify(achievements))
   }, [achievements])
 
-  // NEW RISK SCORE ALGORITHM
-  // Total = 100 points
-  // - Free Cash Flow Ratio: 0-30 points
-  // - Debt-to-Income Ratio: 0-25 points
-  // - Savings Rate: 0-20 points
-  // - Emergency Cushion: 0-15 points
-  // - Deposit Discipline: 0-10 points
+
   const calculateRiskScoreFromData = (financialData: FinancialData): number => {
-    // If no income data, return 0
+  
     if (financialData.monthlyIncome <= 0) {
       return 0
     }
@@ -181,8 +172,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const depositSavings = financialData.depositSavings
     const monthlyExpenses = totalExpenses + monthlyDebtPayments
 
-    // 1. FREE CASH FLOW RATIO (0-30 points)
-    // freeCashFlow = income - totalExpenses - monthlyDebtPayments
+
     const freeCashFlow = income - totalExpenses - monthlyDebtPayments
     const freeCashFlowRatio = freeCashFlow / income
     let cashFlowScore = 0
@@ -198,11 +188,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       cashFlowScore = 0
     }
 
-    // 2. DEBT-TO-INCOME RATIO (0-25 points)
-    // DTI = monthlyDebtPayments / income
+
     let debtScore = 0
     if (monthlyDebtPayments === 0) {
-      debtScore = 25 // No debt = full points
+      debtScore = 25 
     } else {
       const dti = monthlyDebtPayments / income
       if (dti < 0.15) {
@@ -218,8 +207,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 3. SAVINGS RATE (0-20 points)
-    // savingsRate = monthlyDepositContribution / income
+
     let savingsRateScore = 0
     if (income > 0) {
       const savingsRate = monthlyDepositContribution / income
@@ -238,8 +226,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 4. EMERGENCY CUSHION (0-15 points)
-    // cushion = cashSavings / monthlyExpenses (how many months of expenses covered)
+
     let emergencyCushionScore = 0
     if (monthlyExpenses > 0) {
       const cushionMonths = cashSavings / monthlyExpenses
@@ -256,8 +243,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 5. DEPOSIT DISCIPLINE (0-10 points)
-    // Has deposit savings AND makes regular contributions
+
     let depositDisciplineScore = 0
     if (depositSavings > 0 && monthlyDepositContribution > 0) {
       depositDisciplineScore = 10
@@ -271,12 +257,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return Math.max(0, Math.min(100, Math.round(totalScore)))
   }
 
-  // Wrapper that uses current data state
+
   const calculateRiskScore = (): number => {
     return calculateRiskScoreFromData(data)
   }
   
-  // Helper to get available money for savings
   const getAvailableMoney = () => {
     return data.monthlyIncome - data.totalExpenses - data.totalMonthlyDebtPayment
   }
@@ -285,7 +270,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setData((prev) => {
       const updated = { ...prev, ...newData }
 
-      // Recalculate derived values
       const otherExpensesTotal = updated.otherExpenses.reduce(
         (sum, exp) => sum + exp.amount,
         0
@@ -308,7 +292,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         0
       )
 
-      // Update legacy fields for backwards compatibility
       updated.currentSavings = updated.cashSavings + updated.depositSavings
       updated.plannedMonthlySavings = updated.monthlyDepositContribution
 
@@ -323,7 +306,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           ? updated.totalMonthlyDebtPayment / updated.monthlyIncome
           : 0
 
-      // Calculate risk score with the updated data
       updated.riskScore = calculateRiskScoreFromData(updated)
 
       return updated
@@ -371,7 +353,6 @@ export function useFinance() {
   return context
 }
 
-// Utility function to format Tenge
 export function formatTenge(amount: number): string {
   return amount.toLocaleString('ru-KZ').replace(/,/g, ' ') + ' ₸'
 }
